@@ -1,0 +1,253 @@
+{
+  "name": "Log new Shopify orders to Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Log new Shopify orders to Google Sheets\nEvery new Shopify order becomes one tidy row in a Google Sheet, so you can see the holiday rush without exporting CSVs.\n\n### How it works\n1. **On new Shopify order** fires on `orders/create`.\n2. **Normalize Shopify order** builds one row: order number, date (UTC), customer, email, currency, total, a one-line item summary, payment status and a test-order flag.\n3. **Upsert row in Orders** writes it to the `Orders` tab. It matches on `order_key`, so if Shopify delivers the same webhook twice you still get one row.\n\n### Setup\n1. Create a Google Sheet with a tab named `Orders` and this header row:\n`order_key, order_number, order_date, customer_name, customer_email, currency, total, items_summary, financial_status, is_test, logged_at`\n2. In **On new Shopify order**, connect a Shopify OAuth2 credential from an app you create in the Shopify Dev Dashboard with the `read_orders` scope (if you have an older admin-created custom app, switch Authentication to Access Token instead). Customer name and email are protected customer data, so request that access for the app or those columns stay empty. The trigger registers the webhook when you activate the workflow.\n3. In **Upsert row in Orders**, connect your Google account and choose the sheet.\n4. Activate the workflow and place a test order.\n\n### Customization\nTo add a column, return the extra field from **Normalize Shopify order** and add a header with the same name to the sheet.",
+        "height": 760,
+        "width": 520
+      },
+      "id": "346d7749-15db-5be7-a5e0-bccd38efa5e0",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Trigger",
+        "height": 760,
+        "width": 260,
+        "color": 7
+      },
+      "id": "d4a6b7a1-33bf-5bbd-91f0-db22eabdddfd",
+      "name": "Sticky Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -140,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "topic": "orders/create"
+      },
+      "id": "19b805b8-dc0e-5030-9991-6b890870dc15",
+      "name": "On new Shopify order",
+      "type": "n8n-nodes-base.shopifyTrigger",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        120
+      ],
+      "webhookId": "33e700fe-a9cc-5832-8ca6-60cf97785690"
+    },
+    {
+      "parameters": {
+        "content": "## Normalize and save",
+        "height": 760,
+        "width": 520,
+        "color": 7
+      },
+      "id": "fa0bc341-e8bd-5763-9fb4-f83bfce62fa1",
+      "name": "Sticky Note 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize Shopify order: turns the Shopify order payload into one tidy row.\n// Edit the fields below to add or remove columns (the sheet header must match).\nconst money = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0; };\nreturn $input.all().map((item, i) => {\n  const o = item.json;\n  const c = o.customer || {};\n  const items = (o.line_items || []).map((li) => `${li.quantity}x ${li.name || li.title}${li.sku ? ' [' + li.sku + ']' : ''}`);\n  return {\n    json: {\n      order_key: `shopify:${o.id}`,\n      order_number: o.name || String(o.order_number || o.id),\n      order_date: new Date(o.created_at || Date.now()).toISOString(),\n      customer_name: [c.first_name, c.last_name].filter(Boolean).join(' ') || (o.billing_address && o.billing_address.name) || '',\n      customer_email: o.email || o.contact_email || c.email || '',\n      currency: o.currency || '',\n      total: money(o.total_price),\n      items_summary: items.join('; '),\n      financial_status: o.financial_status || '',\n      is_test: o.test === true,\n      logged_at: new Date().toISOString(),\n    },\n    pairedItem: { item: i },\n  };\n});\n"
+      },
+      "id": "fa374d76-eb53-54e9-b4ed-da7f38af9f79",
+      "name": "Normalize Shopify order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Orders",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "order_key"
+          ],
+          "schema": [
+            {
+              "id": "order_key",
+              "displayName": "order_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "order_number",
+              "displayName": "order_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "order_date",
+              "displayName": "order_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "currency",
+              "displayName": "currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total",
+              "displayName": "total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "items_summary",
+              "displayName": "items_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "financial_status",
+              "displayName": "financial_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "is_test",
+              "displayName": "is_test",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "logged_at",
+              "displayName": "logged_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "64fc9df7-6bf6-57c1-ac5b-d18a489b93da",
+      "name": "Upsert row in Orders",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        460,
+        120
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "Normalize Shopify order": {
+      "main": [
+        [
+          {
+            "node": "Upsert row in Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On new Shopify order": {
+      "main": [
+        [
+          {
+            "node": "Normalize Shopify order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
