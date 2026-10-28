@@ -16,7 +16,7 @@ One n8n workflow: each new Shopify order becomes one row in a Google Sheet. A we
 4. **Upsert row in Orders**: connect Google Sheets and choose your sheet.
 5. Your n8n must be reachable from the internet to receive webhooks (for self-hosted, a public HTTPS URL). Click *Execute workflow*, place a Shopify test order, and check the row. Then activate the workflow.
 
-The sticky notes on the canvas repeat these steps. The workflow file contains no credentials; you connect your own after import.
+The sticky notes on the canvas repeat these steps. The workflow file contains no real credentials, only a `REPLACE_WITH_CREDENTIAL_ID` placeholder on the Google Sheets step; you connect your own after import.
 
 ## What was tested
 - Imported and run on self-hosted n8n 2.43.8 with sample Shopify order payloads (test instance, sample data).
