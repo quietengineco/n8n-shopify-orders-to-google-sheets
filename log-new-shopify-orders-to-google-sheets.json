@@ -3,8 +3,8 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Log new Shopify orders to Google Sheets\nEvery new Shopify order becomes one tidy row in a Google Sheet, so you can see the holiday rush without exporting CSVs.\n\n### How it works\n1. **On new Shopify order** fires on `orders/create`.\n2. **Normalize Shopify order** builds one row: order number, date (UTC), customer, email, currency, total, a one-line item summary, payment status and a test-order flag.\n3. **Upsert row in Orders** writes it to the `Orders` tab. It matches on `order_key`, so if Shopify delivers the same webhook twice you still get one row.\n\n### Setup\n1. Create a Google Sheet with a tab named `Orders` and this header row:\n`order_key, order_number, order_date, customer_name, customer_email, currency, total, items_summary, financial_status, is_test, logged_at`\n2. In **On new Shopify order**, connect a Shopify OAuth2 credential from an app you create in the Shopify Dev Dashboard with the `read_orders` scope (if you have an older admin-created custom app, switch Authentication to Access Token instead). Customer name and email are protected customer data, so request that access for the app or those columns stay empty. The trigger registers the webhook when you activate the workflow.\n3. In **Upsert row in Orders**, connect your Google account and choose the sheet.\n4. Activate the workflow and place a test order.\n\n### Customization\nTo add a column, return the extra field from **Normalize Shopify order** and add a header with the same name to the sheet.",
-        "height": 760,
+        "content": "## Log new Shopify orders to Google Sheets\nFor Shopify store owners who want every order in one Google Sheet without exporting CSVs. Each new order becomes one row, and a webhook delivered twice still gives you one row.\n\n### How it works\n1. **On new Shopify order** fires on `orders/create`.\n2. **Normalize Shopify order** builds one row: order number, date (UTC), customer, email, currency, total, item summary, payment status and a test-order flag.\n3. **Upsert row in Orders** writes it to the `Orders` tab, matching on `order_key`, so a repeated webhook updates the existing row. It retries up to 3 times if Google Sheets fails.\n\n### Setup\n1. Create a Google Sheet with a tab named `Orders` and this header row:\n`order_key, order_number, order_date, customer_name, customer_email, currency, total, items_summary, financial_status, is_test, logged_at`\n2. In **On new Shopify order**, connect a Shopify OAuth2 credential from an app with the `read_orders` scope (older admin-created custom apps: use Access Token).\n3. Required: in your Shopify app's **API access**, open **Protected customer data access**, select **Name** and **Email** (reason: Store management) and save. Without it, activating fails with \"Forbidden\".\n4. In **Upsert row in Orders**, connect Google Sheets and choose your sheet.\n5. Activate the workflow (this registers the Shopify webhook) and place a test order.\n\n**Limits:** n8n must be reachable over public HTTPS. Only new orders are logged; later edits and refunds aren't.\n\n**Tested:** n8n Cloud 2.44.5 with a Shopify development store, Oct 2026.\n\n### Customization\nTo add a column, return the extra field from **Normalize Shopify order** and add a header with the same name to the sheet.",
+        "height": 840,
         "width": 520
       },
       "id": "346d7749-15db-5be7-a5e0-bccd38efa5e0",
@@ -18,7 +18,7 @@
     },
     {
       "parameters": {
-        "content": "## Trigger",
+        "content": "## Trigger\nFires once per new Shopify order. Shopify must be able to reach your n8n webhook URL.",
         "height": 760,
         "width": 260,
         "color": 7
@@ -49,7 +49,7 @@
     },
     {
       "parameters": {
-        "content": "## Normalize and save",
+        "content": "## Normalize and save\nTurns the order into one tidy row, then upserts it on `order_key` so repeated webhooks never create duplicate rows.",
         "height": 760,
         "width": 520,
         "color": 7
@@ -214,13 +214,7 @@
       ],
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 3000,
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Google Sheets account"
-        }
-      }
+      "waitBetweenTries": 3000
     }
   ],
   "connections": {

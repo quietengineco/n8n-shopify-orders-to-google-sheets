@@ -12,15 +12,17 @@ One n8n workflow: each new Shopify order becomes one row in a Google Sheet. A we
 ## Setup
 1. Create a Google Sheet with a tab named **Orders** and paste in the header row from `orders-template.csv`.
 2. In n8n: *Import from file* → `log-new-shopify-orders-to-google-sheets.json`.
-3. **On new Shopify order**: connect a *Shopify OAuth2 API* credential for an app you create in the Shopify Dev Dashboard with the `read_orders` scope. If you have an older admin-created custom app, switch Authentication to *Access Token* instead. Customer name and email are protected customer data in Shopify: request that access or those columns stay empty.
-4. **Upsert row in Orders**: connect Google Sheets and choose your sheet.
-5. Your n8n must be reachable from the internet to receive webhooks (for self-hosted, a public HTTPS URL). Click *Execute workflow*, place a Shopify test order, and check the row. Then activate the workflow.
+3. **On new Shopify order**: connect a *Shopify OAuth2 API* credential for an app you create in the Shopify Dev Dashboard with the `read_orders` scope. If you have an older admin-created custom app, switch Authentication to *Access Token* instead.
+4. **Required: Protected customer data access.** Shopify treats customer name and email as protected customer data, and until your app has this access, activating the workflow fails with `Forbidden` ("This topic contains protected customer data") when n8n registers the `orders/create` webhook. In the Shopify Partner Dashboard go to **Apps → your app → API access → Protected customer data access**, select **Name** and **Email**, give a reason such as *Store management*, and save. For a custom app or a development-store app, Step 1 on that page is all you need. Merchants using their own custom app need the same setting.
+5. **Upsert row in Orders**: connect Google Sheets and choose your sheet.
+6. Your n8n must be reachable from the internet to receive webhooks (for self-hosted, a public HTTPS URL). Click *Execute workflow*, place a Shopify test order, and check the row. Then activate the workflow.
 
-The sticky notes on the canvas repeat these steps. The workflow file contains no real credentials, only a `REPLACE_WITH_CREDENTIAL_ID` placeholder on the Google Sheets step; you connect your own after import.
+The sticky notes on the canvas repeat these steps. The workflow file contains no credentials or credential IDs; after import you pick your own Shopify and Google Sheets credentials on those two nodes.
 
 ## What was tested
-- Imported and run on self-hosted n8n 2.43.8 with sample Shopify order payloads (test instance, sample data).
-- **Not** run against a live Shopify store, and not tested on n8n Cloud.
+- **End-to-end on n8n Cloud 2.44.5 with a Shopify development store (Oct 2026):** imported this workflow (same nodes and settings; only sticky-note text changed since), connected real Shopify and Google Sheets credentials, activated it, and placed 2 test orders marked as paid. Both landed as rows in the `Orders` sheet. Re-running one order updated its existing row (matched on `order_key`) without adding a duplicate.
+- Also built and run earlier on self-hosted n8n 2.43.8 with sample Shopify order payloads.
+- Not yet run on a live store with real customer orders.
 
 ## Customize
 To add a column, return the extra field from **Normalize Shopify order** and add a header with the same name to the sheet.
